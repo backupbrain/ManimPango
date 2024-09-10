@@ -208,6 +208,9 @@ else:
     returns = {}
     returns["libraries"] = NEEDED_LIBS
 if sys.platform == "win32":
+    _pkg_config_pangowin32 = PKG_CONFIG("pangowin32")
+    returns = update_dict(returns, _pkg_config_pangowin32.setuptools_args)
+
     returns["libraries"] += ["Gdi32"]
     if not sysconfig.get_platform().startswith("mingw"):  # MSVC compilers
         returns["libraries"] = list(
@@ -233,8 +236,8 @@ ext_modules = [
         **returns,
     ),
     Extension(
-        "manimpango.register_font",
-        [str(base_file / ("register_font" + ext))],
+        "manimpango._register_font",
+        [str(base_file / ("_register_font" + ext))],
         **returns,
     ),
 ]
