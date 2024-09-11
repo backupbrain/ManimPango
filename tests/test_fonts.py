@@ -131,8 +131,14 @@ def test_simple_fonts_render(tmpdir):
     not sys.platform.startswith("linux"), reason="unsupported api other than linux"
 )
 def test_both_fc_and_register_font_are_same():
-    assert manimpango.fc_register_font == manimpango.register_font
-    assert manimpango.fc_unregister_font == manimpango.unregister_font
+    assert (
+        manimpango._register_font._fc_register_font
+        == manimpango._register_font._register_font
+    )
+    assert (
+        manimpango._register_font._fc_unregister_font
+        == manimpango._register_font._unregister_font
+    )
 
 
 @pytest.mark.parametrize("font_file", font_lists_dict)
