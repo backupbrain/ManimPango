@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from functools import cache
+from functools import lru_cache
 
 from ._register_font import (
     RegisteredFont,
@@ -151,4 +151,6 @@ def list_fonts() -> list:
     :class:`list` :
         List of fonts sorted alphabetically.
     """
-    return cache(_list_fonts)(tuple(sorted(registered_fonts, key=lambda x: x.path)))
+    return lru_cache(maxsize=None)(_list_fonts)(
+        tuple(sorted(registered_fonts, key=lambda x: x.path))
+    )
