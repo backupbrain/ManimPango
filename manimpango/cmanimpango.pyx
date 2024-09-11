@@ -77,8 +77,9 @@ def text2svg(
     layout = pango_cairo_create_layout(cr)
     fontmap = pango_context_get_font_map (pango_layout_get_context (layout));
 
-    for font_path in registered_fonts:
-        add_to_fontmap(fontmap, font_path)
+    for font_item in registered_fonts:
+        if font_item.type == 'win32':
+            add_to_fontmap(fontmap, font_item.path)
 
     if layout == NULL:
         cairo_destroy(cr)
@@ -245,8 +246,9 @@ class MarkupUtils:
 
         fontmap = pango_context_get_font_map (pango_layout_get_context (layout));
 
-        for font_path in registered_fonts:
-            add_to_fontmap(fontmap, font_path)
+        for font_item in registered_fonts:
+            if font_item.type == 'win32':
+                add_to_fontmap(fontmap, font_item.path)
 
         if pango_width is None:
             pango_layout_set_width(layout, pango_units_from_double(width))

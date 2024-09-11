@@ -2,9 +2,22 @@ from pathlib import Path
 from pango cimport *
 
 import os
-import warnings
+from dataclasses import dataclass
 
 include "utils.pxi"
+
+@dataclass(frozen=True)
+class RegisteredFont:
+    """A class to represent a font file.
+
+    Attributes
+    ----------
+    path : :class:`str`
+        The path to the font file.
+    """
+
+    path: str
+    type: "fontconfig" | "win32" | "macos"
 
 cpdef bint _fc_register_font(set registered_fonts, str font_path):
     a = Path(font_path)
@@ -14,7 +27,7 @@ cpdef bint _fc_register_font(set registered_fonts, str font_path):
     cdef const unsigned char* fontPath = font_path_bytes
     fontAddStatus = FcConfigAppFontAddFile(FcConfigGetCurrent(), fontPath)
     if fontAddStatus:
-        registered_fonts.add(font_path)
+        registered_fonts.add(RegisteredFont(font_path, "fontconfig"))
         return True
     else:
         return False
@@ -22,7 +35,12 @@ cpdef bint _fc_register_font(set registered_fonts, str font_path):
 
 cpdef bint _fc_unregister_font(set registered_fonts, str font_path):
     FcConfigAppFontClear(NULL)
-    registered_fonts.clear()
+    # remove all type "fontconfig" files
+    copy = registered_fonts.copy()
+    for font in copy:
+        if font.type == 'fontconfig':
+            registered_fonts.remove(font)
+
     return True
 
 
@@ -43,12 +61,8 @@ ELIF UNAME_SYSNAME == "Windows":
             0
         )
 
-        # add to registered_fonts even if it fails
-        # since there's another new API where it's registered again
-        registered_fonts.add(font_path)
-
-
         if fontAddStatus > 0:
+            registered_fonts.add(RegisteredFont(font_path, "win32"))
             return True
         else:
             return False
@@ -59,8 +73,9 @@ ELIF UNAME_SYSNAME == "Windows":
         assert a.exists(), f"font doesn't exist at {a.absolute()}"
         font_path = os.fspath(a.absolute())
 
-        if font_path in registered_fonts:
-            registered_fonts.remove(font_path)
+        font = RegisteredFont(font_path, "win32")
+        if font in registered_fonts:
+            registered_fonts.remove(font)
 
         cdef LPCWSTR wchar_path = PyUnicode_AsWideCharString(font_path, NULL)
         return RemoveFontResourceExW(
@@ -84,7 +99,7 @@ ELIF UNAME_SYSNAME == "Darwin":
             NULL
         )
         if res:
-            registered_fonts.add(os.fspath(a.absolute()))
+            registered_fonts.add(RegisteredFont(os.fspath(a.absolute()), "macos"))
             return True
         else:
             return False
@@ -103,8 +118,9 @@ ELIF UNAME_SYSNAME == "Darwin":
             NULL
         )
         if res:
-            if font_path in registered_fonts:
-                registered_fonts.remove(os.fspath(a.absolute()))
+            font = RegisteredFont(os.fspath(a.absolute()), "macos")
+            if font in registered_fonts:
+                registered_fonts.remove(font)
             return True
         else:
             return False
@@ -116,7 +132,8 @@ cpdef list _list_fonts(tuple registered_fonts):
         raise MemoryError("Pango.FontMap can't be created.")
 
     for font in registered_fonts:
-        add_to_fontmap(fontmap, font)
+        if font.type == 'win32':
+            add_to_fontmap(fontmap, font.path)
 
     cdef int n_families=0
     cdef PangoFontFamily** families=NULL

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from functools import cache
+from dataclasses import dataclass
 
 from ._register_font import (
     _fc_register_font,
@@ -6,7 +9,8 @@ from ._register_font import (
     _list_fonts,
     _register_font,
     _unregister_font,
-)  # noqa: F403,F401
+    RegisteredFont,
+)
 
 __all__ = [
     "fc_register_font",
@@ -15,10 +19,11 @@ __all__ = [
     "register_font",
     "unregister_font",
     "registered_fonts",
+    "RegisteredFont",
 ]
 
 # An set of all registered font paths
-registered_fonts = set()
+registered_fonts: set[RegisteredFont] = set()
 
 
 def fc_register_font(font_path: str) -> None:
@@ -146,4 +151,4 @@ def list_fonts() -> list:
     :class:`list` :
         List of fonts sorted alphabetically.
     """
-    return cache(_list_fonts)(tuple(sorted(registered_fonts)))
+    return cache(_list_fonts)(tuple(sorted(registered_fonts, key=lambda x: x.path)))

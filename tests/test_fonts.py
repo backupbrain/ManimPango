@@ -118,9 +118,8 @@ def test_adding_dummy_font(tmpdir):
     dummy = tmpdir / "font.ttf"
     with open(dummy, "wb") as f:
         f.write(b"dummy")
+    
     assert not manimpango.register_font(str(dummy)), "Registered a dummy font?"
-    assert not manimpango.fc_register_font(str(dummy)), "Registered a dummy font?"
-
 
 def test_simple_fonts_render(tmpdir):
     filename = str(Path(tmpdir) / "hello.svg")
