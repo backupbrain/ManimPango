@@ -12,14 +12,14 @@ import zipfile
 from pathlib import Path
 from urllib.request import urlretrieve as download
 
-PANGO_VERSION = "1.50.5"
+PANGO_VERSION = "1.54.0"
 
 
 def get_platform():
     if (struct.calcsize("P") * 8) == 32:
-        return "32"
+        return "x86"
     else:
-        return "64"
+        return "x64"
 
 
 logging.basicConfig(format="%(levelname)s - %(message)s", level=logging.DEBUG)
@@ -30,7 +30,7 @@ logging.debug(f"Found Platform as {plat}")
 
 download_url = (
     "https://github.com/naveen521kk/pango-build/releases"
-    f"/download/v{PANGO_VERSION}/pango-build-win{plat}.zip"
+    f"/download/v{PANGO_VERSION}/pango-v{PANGO_VERSION}-{plat}.zip"
 )
 final_location = Path(r"C:\cibw\vendor")
 download_location = Path(tempfile.mkdtemp())
@@ -52,7 +52,7 @@ os.remove(download_file)
 logging.info("Completed Extracting.")
 logging.info("Moving Files accordingly.")
 
-plat_location = download_location
+plat_location = download_location / f"pango-{plat}"
 for src_file in plat_location.glob("*"):
     logging.debug(f"Moving {src_file} to {final_location}...")
     shutil.move(str(src_file), str(final_location))
