@@ -32,10 +32,11 @@ if sys.argv[-1] == "--coverage":
 
 
 def get_version():
+    dic = {}
     version_file = "manimpango/_version.py"
     with open(version_file) as f:
-        exec(compile(f.read(), version_file, "exec"))
-    return locals()["__version__"]
+        exec(compile(f.read(), version_file, "exec"), dic)
+    return dic["__version__"]
 
 
 NAME = "ManimPango"
