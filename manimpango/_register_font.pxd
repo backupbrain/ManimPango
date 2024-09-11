@@ -1,5 +1,6 @@
-from pango cimport *
 from libc.stddef cimport wchar_t
+from pango cimport *
+
 
 cdef extern from "Python.h":
     wchar_t* PyUnicode_AsWideCharString(

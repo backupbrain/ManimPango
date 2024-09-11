@@ -158,4 +158,3 @@ cpdef list _list_fonts(tuple registered_fonts):
     g_object_unref(fontmap)
     family_list.sort()
     return family_list
-

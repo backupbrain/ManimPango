@@ -1,15 +1,15 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from functools import cache
-from dataclasses import dataclass
 
 from ._register_font import (
+    RegisteredFont,
     _fc_register_font,
     _fc_unregister_font,
     _list_fonts,
     _register_font,
     _unregister_font,
-    RegisteredFont,
 )
 
 __all__ = [

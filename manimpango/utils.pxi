@@ -2,6 +2,7 @@ from _register_font cimport *
 
 import warnings
 
+
 cdef inline add_to_fontmap(PangoFontMap* fontmap, str font_path):
     cdef GError *err = NULL
     error_message = ""
@@ -11,7 +12,7 @@ cdef inline add_to_fontmap(PangoFontMap* fontmap, str font_path):
         error_message = "Unknown error"
     else:
         error_message = err.message.decode('utf-8')
-    
+
     if not success:
         warnings.warn(
             f"Failed to add font at {font_path} to fontmap. Reason: {error_message}",

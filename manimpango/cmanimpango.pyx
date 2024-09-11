@@ -2,9 +2,9 @@ import typing
 import warnings
 from xml.sax.saxutils import escape
 
+from . import registered_fonts
 from .enums import Alignment
 from .utils import *
-from . import registered_fonts
 
 include "utils.pxi"
 

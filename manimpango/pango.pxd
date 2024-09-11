@@ -178,7 +178,7 @@ cdef extern from *:
             return 1;
         }
     #endif
-    
+
     """
     # The above docs string is C which is used to
     # check for the Pango Version there at run time.
