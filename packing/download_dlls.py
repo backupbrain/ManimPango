@@ -3,23 +3,21 @@
 import logging
 import os
 import re
-import shlex
 import shutil
 import struct
-import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
 from urllib.request import urlretrieve as download
 
-PANGO_VERSION = "1.50.5"
+PANGO_VERSION = "1.54.0-v1"
 
 
 def get_platform():
     if (struct.calcsize("P") * 8) == 32:
-        return "32"
+        return "x86"
     else:
-        return "64"
+        return "x64"
 
 
 logging.basicConfig(format="%(levelname)s - %(message)s", level=logging.DEBUG)
@@ -30,7 +28,7 @@ logging.debug(f"Found Platform as {plat}")
 
 download_url = (
     "https://github.com/naveen521kk/pango-build/releases"
-    f"/download/v{PANGO_VERSION}/pango-build-win{plat}.zip"
+    f"/download/v{PANGO_VERSION}/pango-v{PANGO_VERSION}-{plat}.zip"
 )
 final_location = Path(r"C:\cibw\vendor")
 download_location = Path(tempfile.mkdtemp())
@@ -52,7 +50,7 @@ os.remove(download_file)
 logging.info("Completed Extracting.")
 logging.info("Moving Files accordingly.")
 
-plat_location = download_location
+plat_location = download_location / f"pango-{plat}"
 for src_file in plat_location.glob("*"):
     logging.debug(f"Moving {src_file} to {final_location}...")
     shutil.move(str(src_file), str(final_location))
@@ -63,7 +61,7 @@ logging.info("Fixing .pc files")
 rex = re.compile("^prefix=(.*)")
 
 
-def new_place(some):
+def new_place(_: re.Match[str]) -> str:
     return f"prefix={str(final_location.as_posix())}"
 
 
@@ -76,12 +74,31 @@ for i in pc_files.glob("*.pc"):
     with open(i, "w") as f:
         f.write(final)
 
-logging.info("Building pkg-config")
-
-pkg_config_log = r"C:\cibw\pkg-config"
-build_file_loc = str(
-    (Path(__file__).parent.resolve() / "build_pkgconfig.ps1").absolute()
+logging.info("Getting pkg-config")
+download(
+    url="https://github.com/naveen521kk/pango-build"
+    f"/releases/download/v{PANGO_VERSION}/pkgconf.zip",
+    filename=download_file,
 )
-command = f'powershell -nologo -noexit -file "{build_file_loc}" "{pkg_config_log}"'
-print(command)
-subprocess.check_call(shlex.split(command), shell=True)
+with zipfile.ZipFile(
+    download_file, mode="r", compression=zipfile.ZIP_DEFLATED
+) as file:  # noqa: E501
+    file.extractall(download_location)
+
+os.makedirs(str(final_location / "bin"), exist_ok=True)
+shutil.move(
+    str(download_location / "pkgconf" / "bin" / "pkgconf.exe"),
+    str(final_location / "bin"),
+)
+# alias pkgconf to pkg-config
+shutil.copy(
+    final_location / "bin" / "pkgconf.exe", final_location / "bin" / "pkg-config.exe"
+)
+
+# On MSVC, meson would create static libraries as
+# libcairo.a but setuptools doens't know about it.
+libreg = re.compile(r"lib(?P<name>\S*)\.a")
+libdir = final_location / "lib"
+for lib in libdir.glob("lib*.a"):
+    name = libreg.match(lib.name).group("name") + ".lib"
+    shutil.move(lib, libdir / name)

@@ -2,9 +2,11 @@ import typing
 import warnings
 from xml.sax.saxutils import escape
 
+from . import registered_fonts
 from .enums import Alignment
 from .utils import *
 
+include "utils.pxi"
 
 class TextSetting:
     """Formatting for slices of a :class:`manim.mobject.svg.text_mobject.Text` object."""
@@ -48,6 +50,7 @@ def text2svg(
     cdef double font_size_c = size
     cdef cairo_status_t status
     cdef int temp_width
+    cdef PangoFontMap* fontmap
 
     file_name_bytes = file_name.encode("utf-8")
     surface = cairo_svg_surface_create(file_name_bytes,width,height)
@@ -72,6 +75,11 @@ def text2svg(
     last_line_num = 0
 
     layout = pango_cairo_create_layout(cr)
+    fontmap = pango_context_get_font_map (pango_layout_get_context (layout));
+
+    for font_item in registered_fonts:
+        if font_item.type == 'win32':
+            add_to_fontmap(fontmap, font_item.path)
 
     if layout == NULL:
         cairo_destroy(cr)
@@ -206,6 +214,7 @@ class MarkupUtils:
         cdef cairo_status_t status
         cdef double font_size = size
         cdef int temp_int # a temporary C integer for conversion
+        cdef PangoFontMap* fontmap
 
         file_name_bytes = file_name.encode("utf-8")
 
@@ -234,6 +243,12 @@ class MarkupUtils:
             cairo_destroy(context)
             cairo_surface_destroy(surface)
             raise MemoryError("Pango.Layout can't be created from Cairo Context.")
+
+        fontmap = pango_context_get_font_map (pango_layout_get_context (layout));
+
+        for font_item in registered_fonts:
+            if font_item.type == 'win32':
+                add_to_fontmap(fontmap, font_item.path)
 
         if pango_width is None:
             pango_layout_set_width(layout, pango_units_from_double(width))

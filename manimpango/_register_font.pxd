@@ -1,5 +1,5 @@
-
 from libc.stddef cimport wchar_t
+from pango cimport *
 
 
 cdef extern from "Python.h":
@@ -35,6 +35,13 @@ IF UNAME_SYSNAME == "Windows":
             DWORD  fl,
             unsigned int pdv
         )
+
+        ctypedef void* HANDLE
+        HANDLE CreateMutexA(void* lpMutexAttributes, int bInitialOwner, const char* lpName)
+        int ReleaseMutex(HANDLE hMutex)
+        int WaitForSingleObject(HANDLE hHandle, unsigned long dwMilliseconds)
+        int CloseHandle(HANDLE hObject)
+
 ELIF UNAME_SYSNAME == "Darwin":
     cdef extern from "Carbon/Carbon.h":
         ctypedef struct CFURLRef:

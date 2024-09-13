@@ -32,10 +32,11 @@ if sys.argv[-1] == "--coverage":
 
 
 def get_version():
+    dic = {}
     version_file = "manimpango/_version.py"
     with open(version_file) as f:
-        exec(compile(f.read(), version_file, "exec"))
-    return locals()["__version__"]
+        exec(compile(f.read(), version_file, "exec"), dic)
+    return dic["__version__"]
 
 
 NAME = "ManimPango"
@@ -43,7 +44,7 @@ MANIMPANGO_VERSION = get_version()
 MINIMUM_PANGO_VERSION = "1.30.0"
 DEBUG = False
 
-if sys.platform == "win32" and sys.version_info >= (3, 13):
+if sys.platform == "win32" and sys.version_info >= (3, 14):
     import atexit
 
     atexit.register(
@@ -208,11 +209,15 @@ else:
     returns = {}
     returns["libraries"] = NEEDED_LIBS
 if sys.platform == "win32":
-    returns["libraries"] += ["Gdi32"]
+    _pkg_config_pangowin32 = PKG_CONFIG("pangowin32")
+    returns = update_dict(returns, _pkg_config_pangowin32.setuptools_args)
+
+    returns["libraries"] += ["Gdi32", "User32", "Advapi32", "Shell32", "Ole32"]
     if not sysconfig.get_platform().startswith("mingw"):  # MSVC compilers
         returns["libraries"] = list(
             set(returns["libraries"]).difference(IGNORE_LIBS_WIN)
         )
+        returns["extra_compile_args"] = ["-DCAIRO_WIN32_STATIC_BUILD"]
     if hasattr(returns, "define_macros"):
         returns["define_macros"] += [("UNICODE", 1)]
     else:
@@ -233,8 +238,8 @@ ext_modules = [
         **returns,
     ),
     Extension(
-        "manimpango.register_font",
-        [str(base_file / ("register_font" + ext))],
+        "manimpango._register_font",
+        [str(base_file / ("_register_font" + ext))],
         **returns,
     ),
 ]

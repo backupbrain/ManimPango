@@ -139,9 +139,20 @@ cdef extern from "pango/pangocairo.h":
         PangoLayout *layout,
         PangoAlignment alignment
     )
+    PangoFontMap* pango_context_get_font_map(
+        PangoContext* context
+    )
+    PangoContext* pango_layout_get_context(
+        PangoLayout* layout
+    )
+
+
 
 cdef extern from *:
     """
+    #if _WIN32
+        #include <pango/pangowin32.h>
+    #endif
     #if PANGO_VERSION_CHECK(1,44,0)
         int set_line_width(PangoLayout *layout,float spacing)
         {
@@ -151,6 +162,23 @@ cdef extern from *:
     #else
         int set_line_width(PangoLayout *layout,float spacing){return 0;}
     #endif
+
+    #if _WIN32 && PANGO_VERSION_CHECK(1,52,0)
+        gboolean font_map_add_font_file(PangoFontMap *font_map,
+                                    const char   *font_file_path,
+                                    GError      **error)
+        {
+          return pango_win32_font_map_add_font_file(font_map, font_file_path, error);
+        }
+    #else
+        gboolean font_map_add_font_file(PangoFontMap *font_map,
+                                    const char   *font_file_path,
+                                    GError      **error)
+        {
+            return 1;
+        }
+    #endif
+
     """
     # The above docs string is C which is used to
     # check for the Pango Version there at run time.
@@ -158,3 +186,8 @@ cdef extern from *:
     # pango>=1.44.0 but we support pango>=1.30.0 that why this
     # conditionals.
     bint set_line_width(PangoLayout *layout,float spacing)
+
+    # only for windows and 1.52.0+
+    gboolean font_map_add_font_file(PangoFontMap *font_map,
+                                    const char   *font_file_path,
+                                    GError      **error)
