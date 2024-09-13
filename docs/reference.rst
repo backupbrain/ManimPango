@@ -10,6 +10,8 @@ Manimpango Reference
    manimpango.MarkupUtils
    manimpango.register_font
    manimpango.unregister_font
+   manimpango.fc_register_font
+   manimpango.fc_unregister_font
    manimpango.list_fonts
 
 Enums
