@@ -212,11 +212,12 @@ if sys.platform == "win32":
     _pkg_config_pangowin32 = PKG_CONFIG("pangowin32")
     returns = update_dict(returns, _pkg_config_pangowin32.setuptools_args)
 
-    returns["libraries"] += ["Gdi32"]
+    returns["libraries"] += ["Gdi32", "User32", "Advapi32", "Shell32", "Ole32"]
     if not sysconfig.get_platform().startswith("mingw"):  # MSVC compilers
         returns["libraries"] = list(
             set(returns["libraries"]).difference(IGNORE_LIBS_WIN)
         )
+        returns["extra_compile_args"] = ["-DCAIRO_WIN32_STATIC_BUILD"]
     if hasattr(returns, "define_macros"):
         returns["define_macros"] += [("UNICODE", 1)]
     else:

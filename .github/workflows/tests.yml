@@ -80,12 +80,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: ${{matrix.architecture}}
           allow-prereleases: true
-      - name: Cache Windows
-        id: cache-windows
-        uses: actions/cache@v3
-        with:
-          path: C:\cibw\pkg-config
-          key: ${{ hashFiles('packing/download_dlls.py') }}-${{ hashFiles('packing/build_pkgconfig.ps1') }}
       - name: Download Binary
         run: |
           python packing/download_dlls.py
