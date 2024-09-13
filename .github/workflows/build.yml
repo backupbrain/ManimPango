@@ -16,100 +16,122 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-11, windows-2019]
-        bitness: [32, 64]
         include:
           # Run 32 and 64 bit version in parallel for Windows
-          - os: windows-2019
-            bitness: 64
+          - os: windows-2022
             platform_id: win_amd64
-          - os: windows-2019
-            bitness: 32
+            architecture: x64
+          - os: windows-2022
             platform_id: win32
-          - os: macos-11
-            bitness: 64
+            architecture: x86
+          - os: macos-13
             platform_id: macosx_x86_64
-        exclude:
-          - os: macos-11
-            bitness: 32
+            architecture: x64
+          - os: macos-14
+            platform_id: macosx_arm64
+            architecture: arm64
     env:
-      CIBW_BUILD: cp38-${{ matrix.platform_id }} cp39-${{ matrix.platform_id }} cp310-${{ matrix.platform_id }} cp311-${{ matrix.platform_id }} cp312-${{ matrix.platform_id }}
-      CIBW_SKIP: pp* cp35* cp36* cp37*
-      CIBW_BEFORE_BUILD_MACOS: "source packing/build_pango_mac.sh"
+      CIBW_BUILD: cp39-${{ matrix.platform_id }} cp310-${{ matrix.platform_id }} cp311-${{ matrix.platform_id }} cp312-${{ matrix.platform_id }} cp313-${{ matrix.platform_id }}
+      CIBW_SKIP: pp* cp36* cp37* cp38*
+      CIBW_BEFORE_BUILD_MACOS: "python packing/download_pango_macos.py ${{ matrix.architecture }}"
       CIBW_BEFORE_BUILD_WINDOWS: "python packing/download_dlls.py"
       CIBW_ENVIRONMENT_WINDOWS: "PKG_CONFIG_PATH='C:\\cibw\\vendor\\lib\\pkgconfig'"
       CIBW_ENVIRONMENT_MACOS: "PKG_CONFIG_PATH='/Users/runner/pangobuild/lib/pkgconfig'"
-      CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: python packing/inject-dlls.py {wheel} {dest_dir} C:\cibw\vendor\bin
       CIBW_TEST_REQUIRES: pytest pytest-cov
       CIBW_TEST_COMMAND: "bash {project}/packing/test_wheels.sh {project}"
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        name: Install Python
-        with:
-          python-version: "3.8"
-
-      - name: Install cibuildwheel
-        env:
-          event_name: ${{ github.event_name }}
-        continue-on-error: true
-        shell: bash
+      - uses: actions/checkout@v4
+      - name: Set Path for pkg-config
+        if: runner.os == 'windows'
         run: |
-          python -m pip install cibuildwheel==2.16.1
-          echo "$event_name"
+          $env:Path = "C:\cibw\pkg-config\bin;C:\cibw\vendor\bin;$($env:PATH)"
+          echo "$env:Path" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Build wheels (Windows)
         if: runner.os == 'windows'
+        shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $env:PATH="$env:PATH;C:\cibw\pkg-config\bin"
-          $env:PKG_CONFIG_PATH="C:\cibw\vendor\lib\pkgconfig"
           Copy-Item packing/LICENSE.bin .
           Rename-Item LICENSE.bin LICENSE.win32
-          python -m cibuildwheel --output-dir wheelhouse
 
       - name: Build wheels (Non-Windows)
         if: runner.os != 'windows'
         run: |
           cp packing/LICENSE.bin .
-          python -m cibuildwheel --output-dir wheelhouse
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.20.0
+        env:
+          PKG_CONFIG_PATH: "C:\\cibw\\vendor\\lib\\pkgconfig"
 
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
           name: wheels-${{ runner.os }}-${{ matrix.platform_id }}
 
-  test_wheels:
-    name: Test wheels on ${{ matrix.os }}-${{ matrix.platform_id }}-${{ matrix.python-version }}
+  test_wheels_win:
+    name: Test wheels on Windows - ${{ matrix.platform_id }} (${{ matrix.python-version }})
+    needs: [build_wheels]
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, x86]
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        include: [
+          {platform_id: win_amd64, architecture: x64},
+          {platform_id: win32, architecture: x86},
+        ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        name: Install Python
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture }}
+          allow-prereleases: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheels-${{ runner.os }}-${{ matrix.platform_id }}
+          path: ~/wheelhouse
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-cov
+
+      - name: Install wheels
+        run: |
+          pip install --no-index --find-links ~/wheelhouse ManimPango
+
+      - name: Run tests
+        shell: bash
+        run: |
+          bash packing/test_wheels.sh $(pwd)
+
+  test_wheels_mac:
+    name: Test wheels on macOS - ${{ matrix.platform_id }} (${{ matrix.python-version }})
     needs: [build_wheels]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-11, windows-2019]
-        architecture: [x86, x64]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-        include:
-          - os: windows-2019
-            architecture: x64
-            platform_id: win_amd64
-          - os: windows-2019
-            architecture: x86
-            platform_id: win32
-          - os: macos-11
-            architecture: x64
-            platform_id: macosx_x86_64
-        exclude:
-          - os: macos-11
-            architecture: x86
+        architecture: [x64, arm64]
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        include: [
+          {platform_id: macosx_x86_64, architecture: x64, os: macos-13},
+          {platform_id: macosx_arm64, architecture: arm64, os: macos-14},
+        ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.architecture }}
+          architecture: ${{ matrix.architecture == 'arm64' && null || matrix.architecture }}
+          allow-prereleases: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -130,7 +152,7 @@ jobs:
           bash packing/test_wheels.sh $(pwd)
 
   publish_wheels:
-    needs: [test_wheels]
+    needs: [test_wheels_mac, test_wheels_win]
     name: Upload wheels
     runs-on: ubuntu-latest
     if: github.event_name== 'release'
@@ -162,7 +184,7 @@ jobs:
     if: github.event_name== 'release'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -221,7 +243,7 @@ jobs:
           asset_content_type: application/gzip
 
   success:
-    needs: [test_wheels]
+    needs: [test_wheels_win, test_wheels_mac]
     runs-on: ubuntu-latest
     name: Building and testing of wheels success
     steps:
