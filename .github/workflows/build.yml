@@ -69,35 +69,19 @@ jobs:
           path: ./wheelhouse/*.whl
           name: wheels-${{ runner.os }}-${{ matrix.platform_id }}
 
-  test_wheels:
-    name: Test wheels on ${{ matrix.os }}-${{ matrix.platform_id }}-${{ matrix.python-version }}
+  test_wheels_win:
+    name: Test wheels on Windows - ${{ matrix.platform_id }} (${{ matrix.python-version }})
     needs: [build_wheels]
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
+        architecture: [x64, x86]
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
-        os: [windows-2022, macos-13, macos-14]
-        include:
-          - os: windows-2022
-            platform_id: win_amd64
-            architecture: x64
-          - os: windows-2022
-            platform_id: win32
-            architecture: x86
-          - os: macos-13
-            platform_id: macosx_x86_64
-            architecture: x86_64
-          - os: macos-14
-            platform_id: macosx_arm64
-            architecture: arm64
-
-        # include: [
-        #   {os: windows-2022, platform_id: win_amd64, architecture: x64},
-        #   {os: windows-2022, platform_id: win32, architecture: x86},
-        #   {os: macos-13, platform_id: macosx_x86_64, architecture: x86_64},
-        #   {os: macos-14, platform_id: macosx_arm64, architecture: arm64}
-        # ]
+        include: [
+          {platform_id: win_amd64, architecture: x64},
+          {platform_id: win32, architecture: x86},
+        ]
     steps:
       - uses: actions/checkout@v4
 
@@ -106,6 +90,48 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.architecture }}
+          allow-prereleases: true
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheels-${{ runner.os }}-${{ matrix.platform_id }}
+          path: ~/wheelhouse
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-cov
+
+      - name: Install wheels
+        run: |
+          pip install --no-index --find-links ~/wheelhouse ManimPango
+
+      - name: Run tests
+        shell: bash
+        run: |
+          bash packing/test_wheels.sh $(pwd)
+
+  test_wheels_mac:
+    name: Test wheels on macOS - ${{ matrix.platform_id }} (${{ matrix.python-version }})
+    needs: [build_wheels]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [x64, arm64]
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        include: [
+          {platform_id: macosx_x86_64, architecture: x64, os: macos-13},
+          {platform_id: macosx_arm64, architecture: arm64, os: macos-14},
+        ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        name: Install Python
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture == 'arm64' && null || matrix.architecture }}
+          allow-prereleases: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -126,7 +152,7 @@ jobs:
           bash packing/test_wheels.sh $(pwd)
 
   publish_wheels:
-    needs: [test_wheels]
+    needs: [test_wheels_mac, test_wheels_win]
     name: Upload wheels
     runs-on: ubuntu-latest
     if: github.event_name== 'release'
@@ -217,7 +243,7 @@ jobs:
           asset_content_type: application/gzip
 
   success:
-    needs: [test_wheels]
+    needs: [test_wheels_win, test_wheels_mac]
     runs-on: ubuntu-latest
     name: Building and testing of wheels success
     steps:
