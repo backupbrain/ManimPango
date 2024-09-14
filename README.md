@@ -44,7 +44,7 @@ For building **ManimPango**, you need
 * [`pkg-config`](https://www.freedesktop.org/wiki/Software/pkg-config/)
 * [Pango](https://pango.gnome.org) along with its development headers and its dependencies.
 
-If you are on MacOS, you can use [brew](https://brew.sh) to install those. Using [MacPorts](https://www.macports.org) is also possible, but their version of **Pango** is old and will probably not be updated in the near future.
+If you are on MacOS, you can use [brew](https://brew.sh) to install those. Using [MacPorts](https://www.macports.org) is also possible.
 
 ```sh
 brew install pango pkg-config
@@ -145,9 +145,9 @@ pacman -S mingw-w64-x86_64-ffmpeg
 
 #### Visual Studio
 
-First, install Visual Studio as specified in https://wiki.python.org/moin/WindowsCompilers. Possibly Visual Studio Build Tools 2019 with Windows10 SDK.
+First, install Visual Studio as specified in https://wiki.python.org/moin/WindowsCompilers. Possibly Visual Studio Build Tools 2022 with Windows10 SDK.
 
-Then run the script at `packing/download_dlls.py`. This will get a **Pango** build along with `pkg-config` and install it at `C:\cibw\vendor`. Add `C:\cibw\vendor\bin` and `C:\cibw\vendor\pkg-config\bin` to PATH.
+Then run the script at `packing/download_dlls.py`. This will get a **Pango** build along with `pkg-config` and install it at `C:\cibw\vendor`. Add `C:\cibw\vendor\bin` to PATH.
 
 **Note:** You can change the install location by editing line 24 of the file `packing/download_dlls.py`.
 
@@ -163,13 +163,6 @@ Finally, you can install your local **ManimPango** clone just like any other pyt
 
 ```sh
 pip install .
-```
-
-**Important**: You have to to use https://docs.python.org/3/library/os.html#os.add_dll_directory before running **ManimPango**. Alternatively, you need to copy the `dll` at `C:\cibw\vendor\bin` to the folder where **ManimPango** is compiled.  This is applicable for Python 3.8 and above.
-
-```python
-import os
-os.add_dll_directory('C:\cibw\vendor\bin')
 ```
 
 ## Code of Conduct
