@@ -1,4 +1,4 @@
-global-include *.pyx *.pxd
+global-include *.pyx *.pxd *.pxi
 recursive-include tests *.py *.ttf LICENSE.txt *.svg
 recursive-include docs *.rst *.py make* _*/*
 prune docs/_build
